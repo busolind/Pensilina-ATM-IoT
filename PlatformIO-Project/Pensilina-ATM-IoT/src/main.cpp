@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <ArduinoJson.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
 #include <TaskScheduler.h>
@@ -10,13 +11,13 @@ const char *password = "IOT_TEST";
 String apiUrl = "https://giromilano.atm.it/proxy.ashx";
 String stopCode = "12493";
 
-Scheduler ts;
-
-//WiFiClient espClient;
-
 // Expires On	Thursday, 28 July 2022 at 14:00:00
 // const char fingerprint[] PROGMEM = "72 84 14 05 5A 4B 27 DD 07 44 FC 00 96 4E 9B 06 42 0B 9C 7F";
 // pare funzionare anche senza fingerprint
+
+String stopJSON = "";
+String lineId = "";
+String waitMessage = "";
 
 void setup_wifi() {
   delay(10);
@@ -68,7 +69,7 @@ void https_request() {
       // file found at server
       if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY || httpCode == 400) {
         String payload = https.getString();
-        Serial.println("RESP LENGTH: " + https.getSize());
+        stopJSON = payload;
         Serial.println(payload);
       }
     } else {
@@ -81,6 +82,21 @@ void https_request() {
   }
 }
 
+void parse_stopJSON() {
+  if (stopJSON != "") {
+    DynamicJsonDocument doc(3000);
+    DeserializationError error = deserializeJson(doc, stopJSON);
+
+    if (error) {
+      Serial.print(F("deserializeJson() failed: "));
+      Serial.println(error.f_str());
+    } else {
+      lineId = doc["Lines"][0]["Line"]["LineId"].as<String>();
+      waitMessage = doc["Lines"][0]["WaitMessage"].as<String>();
+    }
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   setup_wifi();
@@ -90,5 +106,7 @@ void loop() {
   if (WiFi.status() == WL_CONNECTED) {
     https_request();
   }
-  delay(10000);
+  parse_stopJSON();
+  Serial.println(lineId + "\t" + waitMessage);
+  delay(15000);
 }
