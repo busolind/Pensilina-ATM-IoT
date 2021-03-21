@@ -7,8 +7,8 @@
 const char *ssid = "IOT_TEST";
 const char *password = "IOT_TEST";
 
-char serverAddress[] = "giromilano.atm.it"; // server address
-int port = 443;
+String apiUrl = "https://giromilano.atm.it/proxy.ashx";
+String stopCode = "12493";
 
 Scheduler ts;
 
@@ -41,6 +41,46 @@ void setup_wifi() {
   Serial.println(WiFi.localIP());
 }
 
+void https_request() {
+  String postPayload = "url=tpPortal/geodata/pois/stops/" + stopCode;
+
+  std::unique_ptr<BearSSL::WiFiClientSecure> client(new BearSSL::WiFiClientSecure);
+
+  //client->setFingerprint(fingerprint);
+  client->setInsecure();
+
+  HTTPClient https;
+
+  Serial.print("[HTTPS] begin...\n");
+  if (https.begin(*client, apiUrl)) { // HTTPS
+
+    https.addHeader("Content-Type", "application/x-www-form-urlencoded");
+
+    Serial.print("[HTTPS] POST...\n");
+    // start connection and send HTTP header
+    int httpCode = https.POST(postPayload);
+
+    // httpCode will be negative on error
+    if (httpCode > 0) {
+      // HTTP header has been send and Server response header has been handled
+      Serial.printf("code: %d\n", httpCode);
+
+      // file found at server
+      if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY || httpCode == 400) {
+        String payload = https.getString();
+        Serial.println("RESP LENGTH: " + https.getSize());
+        Serial.println(payload);
+      }
+    } else {
+      Serial.printf("failed, error: %s\n", https.errorToString(httpCode).c_str());
+    }
+
+    https.end();
+  } else {
+    Serial.printf("[HTTPS] Unable to connect\n");
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   setup_wifi();
@@ -48,45 +88,7 @@ void setup() {
 
 void loop() {
   if (WiFi.status() == WL_CONNECTED) {
-    String postPayload = "url=tpPortal/geodata/pois/stops/12493";
-
-    //client.post("/proxy.ashx", contentType, postPayload);
-
-    std::unique_ptr<BearSSL::WiFiClientSecure> client(new BearSSL::WiFiClientSecure);
-
-    //client->setFingerprint(fingerprint);
-    client->setInsecure();
-
-    HTTPClient https;
-
-    Serial.print("[HTTPS] begin...\n");
-    if (https.begin(*client, "https://giromilano.atm.it/proxy.ashx")) { // HTTPS
-
-      https.addHeader("Content-Type", "application/x-www-form-urlencoded");
-
-      Serial.print("[HTTPS] POST...\n");
-      // start connection and send HTTP header
-      int httpCode = https.POST(postPayload);
-
-      // httpCode will be negative on error
-      if (httpCode > 0) {
-        // HTTP header has been send and Server response header has been handled
-        Serial.printf("code: %d\n", httpCode);
-
-        // file found at server
-        if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY || httpCode == 400) {
-          String payload = https.getString();
-          Serial.println("RESP LENGTH: " + https.getSize());
-          Serial.println(payload);
-        }
-      } else {
-        Serial.printf("failed, error: %s\n", https.errorToString(httpCode).c_str());
-      }
-
-      https.end();
-    } else {
-      Serial.printf("[HTTPS] Unable to connect\n");
-    }
+    https_request();
   }
   delay(10000);
 }
