@@ -10,7 +10,10 @@ const char *ssid = "IOT_TEST";
 const char *password = "IOT_TEST";
 
 String apiUrl = "https://giromilano.atm.it/proxy.ashx";
-String stopCode = "14033";
+//String stopCode = "12493"; //Via Celoria (Istituto Besta)
+//String stopCode = "14033"; //Via Bellini V.le Casiraghi (Sesto S.G.)
+//String stopCode = "11492"; //VERY LONG response, tram
+String stopCode = "12587"; //Sesto Marelli M1 dir Bicocca
 
 #define LINES_SIZE 10
 
@@ -26,6 +29,8 @@ unsigned long last_action = 0;
 
 // ToDo:
 //std::list<String> bulletins;
+
+//HTTPS STREAM??
 
 void setup_wifi() {
   delay(10);
@@ -77,8 +82,9 @@ void https_request() {
       // file found at server
       if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY || httpCode == 400) {
         String payload = https.getString();
-        stopJSON = payload;
         Serial.println(payload);
+        //https.ge
+        //stopJSON = payload;
       }
     } else {
       Serial.printf("failed, error: %s\n", https.errorToString(httpCode).c_str());
@@ -140,4 +146,5 @@ void loop() {
   }
 }
 
-//PROBLEM: this stops working after a while, the response stops being printed and the JSON stops being parsed
+//PROBLEM: this stops working after a while and free heap keeps decreasing, the response stops being printed and the
+//JSON stops being parsed. Temporarily solved by not assigning JSON string to global variable
