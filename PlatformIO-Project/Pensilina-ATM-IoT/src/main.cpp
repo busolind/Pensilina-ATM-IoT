@@ -21,7 +21,7 @@ String stopCode = "12587"; //Sesto Marelli M1 dir Bicocca
 // const char fingerprint[] PROGMEM = "72 84 14 05 5A 4B 27 DD 07 44 FC 00 96 4E 9B 06 42 0B 9C 7F";
 // pare funzionare anche senza fingerprint
 
-String stopJSON = "";
+//String stopJSON = "";
 String *lineIds;
 String *waitMessages;
 
@@ -55,6 +55,8 @@ void setup_wifi() {
   Serial.println(WiFi.localIP());
 }
 
+void parse_stopJSON(String stopJSON);
+
 void https_request() {
   String postPayload = "url=tpPortal/geodata/pois/stops/" + stopCode;
 
@@ -81,10 +83,11 @@ void https_request() {
 
       // file found at server
       if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY || httpCode == 400) {
-        String payload = https.getString();
-        Serial.println(payload);
+        //String payload = https.getString();
         //https.ge
-        //stopJSON = payload;
+        String stopJSON = https.getString();
+        Serial.println(stopJSON);
+        parse_stopJSON(stopJSON);
       }
     } else {
       Serial.printf("failed, error: %s\n", https.errorToString(httpCode).c_str());
@@ -96,10 +99,14 @@ void https_request() {
   }
 }
 
-void parse_stopJSON() {
+void parse_stopJSON(String stopJSON) {
   if (stopJSON != "") {
-    DynamicJsonDocument doc(10000);
-    DeserializationError error = deserializeJson(doc, stopJSON);
+    StaticJsonDocument<200> filter;
+    filter["Lines"][0]["Line"]["LineId"] = true;
+    filter["Lines"][0]["WaitMessage"] = true;
+
+    StaticJsonDocument<1000> doc;
+    DeserializationError error = deserializeJson(doc, stopJSON, DeserializationOption::Filter(filter));
 
     if (error) {
       Serial.print(F("deserializeJson() failed: "));
@@ -107,16 +114,16 @@ void parse_stopJSON() {
     } else {
       JsonArray linesArray = doc["Lines"].as<JsonArray>();
 
-      lineIds = new String[LINES_SIZE];
-      waitMessages = new String[LINES_SIZE];
+      //lineIds = new String[LINES_SIZE];
+      //waitMessages = new String[LINES_SIZE];
 
       int i = 0;
       for (JsonVariant line : linesArray) {
         Serial.print(line["Line"]["LineId"].as<String>() + "\t");
         Serial.println(line["WaitMessage"].as<String>());
 
-        lineIds[i] = line["Line"]["LineId"].as<String>();
-        waitMessages[i] = line["WaitMessage"].as<String>();
+        //lineIds[i] = line["Line"]["LineId"].as<String>();
+        //waitMessages[i] = line["WaitMessage"].as<String>();
 
         i++;
       }
@@ -139,7 +146,7 @@ void loop() {
     if (WiFi.status() == WL_CONNECTED) {
       https_request();
     }
-    parse_stopJSON();
+    //parse_stopJSON();
     //Serial.println(lineId + "\t" + waitMessage);
     Serial.print("Free heap: ");
     Serial.println(ESP.getFreeHeap());
@@ -147,4 +154,7 @@ void loop() {
 }
 
 //PROBLEM: this stops working after a while and free heap keeps decreasing, the response stops being printed and the
-//JSON stops being parsed. Temporarily solved by not assigning JSON string to global variable
+//JSON stops being parsed.
+
+//It seems that this memory leak was because of assigning to global variables. Maybe a problem with garbage collection.
+//Need to fix it.
