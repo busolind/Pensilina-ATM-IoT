@@ -4,9 +4,7 @@
 #include <ESP8266WiFi.h>
 #include <SSD1306Wire.h> //https://github.com/ThingPulse/esp8266-oled-ssd1306
 #include <StreamUtils.h>
-#include <TaskScheduler.h>
 #include <WiFiClientSecureBearSSL.h>
-#include <list>
 
 const char *ssid = "IOT_TEST";
 const char *password = "IOT_TEST";
@@ -15,8 +13,8 @@ String apiUrl = "https://giromilano.atm.it/proxy.ashx";
 //String stopCode = "12493"; //Via Celoria (Istituto Besta)
 //String stopCode = "14033"; //Via Bellini V.le Casiraghi (Sesto S.G.)
 //String stopCode = "11492"; //VERY LONG response, tram
-//String stopCode = "12587"; //Sesto Marelli M1 dir Bicocca
-String stopCode = "12581"; //Villa San Giovanni M1
+String stopCode = "12587"; //Sesto Marelli M1 dir Bicocca
+//String stopCode = "12581"; //Villa San Giovanni M1
 
 // Expires On	Thursday, 28 July 2022 at 14:00:00
 // const char fingerprint[] PROGMEM = "72 84 14 05 5A 4B 27 DD 07 44 FC 00 96 4E 9B 06 42 0B 9C 7F";
