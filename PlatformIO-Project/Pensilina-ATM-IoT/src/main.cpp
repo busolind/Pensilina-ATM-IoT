@@ -22,8 +22,8 @@ String stopCode = "12587"; //Sesto Marelli M1 dir Bicocca
 // pare funzionare anche senza fingerprint
 
 //String stopJSON = "";
-String *lineIds;
-String *waitMessages;
+std::list<String> lineIds;
+std::list<String> waitMessages;
 
 unsigned long last_action = 0;
 
@@ -55,7 +55,49 @@ void setup_wifi() {
   Serial.println(WiFi.localIP());
 }
 
-void parse_stopJSON(String stopJSON);
+void parse_stopJSON(String stopJSON) {
+  if (stopJSON != "") {
+    StaticJsonDocument<200> filter;
+    filter["Lines"][0]["Line"]["LineId"] = true;
+    filter["Lines"][0]["WaitMessage"] = true;
+
+    StaticJsonDocument<1000> doc;
+    DeserializationError error = deserializeJson(doc, stopJSON, DeserializationOption::Filter(filter));
+
+    if (error) {
+      Serial.print(F("deserializeJson() failed: "));
+      Serial.println(error.f_str());
+    } else {
+      JsonArray linesArray = doc["Lines"].as<JsonArray>();
+
+      //lineIds = new String[LINES_SIZE];
+      //waitMessages = new String[LINES_SIZE];
+
+      lineIds.clear();
+      waitMessages.clear();
+
+      int i = 0;
+      for (JsonVariant line : linesArray) {
+        Serial.print(line["Line"]["LineId"].as<String>() + "\t");
+        Serial.println(line["WaitMessage"].as<String>());
+
+        String lineId = line["Line"]["LineId"].as<String>();
+        String waitMessage = line["WaitMessage"].as<String>();
+
+        lineIds.push_back(lineId);
+        waitMessages.push_back(waitMessage);
+
+        //lineIds[i] = line["Line"]["LineId"].as<String>();
+        //waitMessages[i] = line["WaitMessage"].as<String>();
+
+        i++;
+      }
+
+      //lineId = doc["Lines"][0]["Line"]["LineId"].as<String>();
+      //waitMessage = doc["Lines"][0]["WaitMessage"].as<String>();
+    }
+  }
+}
 
 void https_request() {
   String postPayload = "url=tpPortal/geodata/pois/stops/" + stopCode;
@@ -96,41 +138,6 @@ void https_request() {
     https.end();
   } else {
     Serial.printf("[HTTPS] Unable to connect\n");
-  }
-}
-
-void parse_stopJSON(String stopJSON) {
-  if (stopJSON != "") {
-    StaticJsonDocument<200> filter;
-    filter["Lines"][0]["Line"]["LineId"] = true;
-    filter["Lines"][0]["WaitMessage"] = true;
-
-    StaticJsonDocument<1000> doc;
-    DeserializationError error = deserializeJson(doc, stopJSON, DeserializationOption::Filter(filter));
-
-    if (error) {
-      Serial.print(F("deserializeJson() failed: "));
-      Serial.println(error.f_str());
-    } else {
-      JsonArray linesArray = doc["Lines"].as<JsonArray>();
-
-      //lineIds = new String[LINES_SIZE];
-      //waitMessages = new String[LINES_SIZE];
-
-      int i = 0;
-      for (JsonVariant line : linesArray) {
-        Serial.print(line["Line"]["LineId"].as<String>() + "\t");
-        Serial.println(line["WaitMessage"].as<String>());
-
-        //lineIds[i] = line["Line"]["LineId"].as<String>();
-        //waitMessages[i] = line["WaitMessage"].as<String>();
-
-        i++;
-      }
-
-      //lineId = doc["Lines"][0]["Line"]["LineId"].as<String>();
-      //waitMessage = doc["Lines"][0]["WaitMessage"].as<String>();
-    }
   }
 }
 
