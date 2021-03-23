@@ -14,8 +14,9 @@ const char *password = "IOT_TEST";
 String apiUrl = "https://giromilano.atm.it/proxy.ashx";
 //String stopCode = "12493"; //Via Celoria (Istituto Besta)
 //String stopCode = "14033"; //Via Bellini V.le Casiraghi (Sesto S.G.)
-String stopCode = "11492"; //VERY LONG response, tram
+//String stopCode = "11492"; //VERY LONG response, tram
 //String stopCode = "12587"; //Sesto Marelli M1 dir Bicocca
+String stopCode = "12581"; //Villa San Giovanni M1
 
 // Expires On	Thursday, 28 July 2022 at 14:00:00
 // const char fingerprint[] PROGMEM = "72 84 14 05 5A 4B 27 DD 07 44 FC 00 96 4E 9B 06 42 0B 9C 7F";
@@ -27,7 +28,7 @@ String stopCode = "11492"; //VERY LONG response, tram
 SSD1306Wire display(0x3c, SDA, SCL, GEOMETRY_128_32); // ADDRESS, SDA, SCL, OLEDDISPLAY_GEOMETRY  -  Extra param required for 128x32 displays.
 
 //String stopJSON = "";
-std::vector<String> lineIds;
+std::vector<String> lineCodes;
 std::vector<String> waitMessages;
 
 unsigned long last_action = 0;
@@ -65,7 +66,7 @@ void setup_wifi() {
 void parse_stopJSON(String stopJSON) {
   if (stopJSON != "") {
     StaticJsonDocument<200> filter;
-    filter["Lines"][0]["Line"]["LineId"] = true;
+    filter["Lines"][0]["Line"]["LineCode"] = true;
     filter["Lines"][0]["WaitMessage"] = true;
 
     StaticJsonDocument<1000> doc;
@@ -77,20 +78,20 @@ void parse_stopJSON(String stopJSON) {
     } else {
       JsonArray linesArray = doc["Lines"].as<JsonArray>();
 
-      //lineIds = new String[LINES_SIZE];
+      //lineCodes = new String[LINES_SIZE];
       //waitMessages = new String[LINES_SIZE];
 
-      lineIds.clear();
+      lineCodes.clear();
       waitMessages.clear();
 
       for (JsonVariant line : linesArray) {
-        Serial.print(line["Line"]["LineId"].as<String>() + "\t");
+        Serial.print(line["Line"]["LineCode"].as<String>() + "\t");
         Serial.println(line["WaitMessage"].as<String>());
 
-        String lineId = line["Line"]["LineId"].as<String>();
+        String lineCode = line["Line"]["LineCode"].as<String>();
         String waitMessage = line["WaitMessage"].as<String>();
 
-        lineIds.push_back(lineId);
+        lineCodes.push_back(lineCode);
         waitMessages.push_back(waitMessage);
       }
     }
@@ -100,7 +101,7 @@ void parse_stopJSON(String stopJSON) {
 void parse_stopJSON_stream(BearSSL::WiFiClientSecure &str_client) {
 
   StaticJsonDocument<200> filter;
-  filter["Lines"][0]["Line"]["LineId"] = true;
+  filter["Lines"][0]["Line"]["LineCode"] = true;
   filter["Lines"][0]["WaitMessage"] = true;
 
   //ReadLoggingStream loggingStream(str_client, Serial);
@@ -127,17 +128,16 @@ void parse_stopJSON_stream(BearSSL::WiFiClientSecure &str_client) {
   } else {
     JsonArray linesArray = doc["Lines"].as<JsonArray>();
 
-    lineIds.clear();
+    lineCodes.clear();
     waitMessages.clear();
 
     for (JsonVariant line : linesArray) {
-      Serial.print(line["Line"]["LineId"].as<String>() + "\t");
-      Serial.println(line["WaitMessage"].as<String>());
+      String lineCode = line["Line"]["LineCode"].as<String>();
+      String waitMessage = line["WaitMessage"].isNull() ? "" : line["WaitMessage"].as<String>();
 
-      String lineId = line["Line"]["LineId"].as<String>();
-      String waitMessage = line["WaitMessage"].as<String>();
+      Serial.println(lineCode + "\t" + waitMessage);
 
-      lineIds.push_back(lineId);
+      lineCodes.push_back(lineCode);
       waitMessages.push_back(waitMessage);
     }
   }
@@ -186,15 +186,15 @@ void draw_display() {
   display.clear();
   display.setTextAlignment(TEXT_ALIGN_LEFT);
   display.setFont(ArialMT_Plain_10);
-  if (lineIds.size() > 0) {
-    display.drawString(0, 0, lineIds.at(0));
+  if (lineCodes.size() > 0) {
+    display.drawString(0, 0, lineCodes.at(0));
     display.setTextAlignment(TEXT_ALIGN_RIGHT);
     display.drawString(127, 0, waitMessages.at(0));
   }
 
   display.setTextAlignment(TEXT_ALIGN_LEFT);
-  if (lineIds.size() > 1) {
-    display.drawString(0, 10, lineIds.at(1));
+  if (lineCodes.size() > 1) {
+    display.drawString(0, 10, lineCodes.at(1));
     display.setTextAlignment(TEXT_ALIGN_RIGHT);
     display.drawString(127, 10, waitMessages.at(1));
   }
@@ -219,7 +219,7 @@ void loop() {
     }
     draw_display();
     //parse_stopJSON();
-    //Serial.println(lineId + "\t" + waitMessage);
+    //Serial.println(lineCode + "\t" + waitMessage);
     Serial.print("Free heap: ");
     Serial.println(ESP.getFreeHeap());
   }
