@@ -2,6 +2,7 @@
 #include <ArduinoJson.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
+#include <SSD1306Wire.h> //https://github.com/ThingPulse/esp8266-oled-ssd1306
 #include <TaskScheduler.h>
 #include <WiFiClientSecureBearSSL.h>
 #include <list>
@@ -15,15 +16,18 @@ String apiUrl = "https://giromilano.atm.it/proxy.ashx";
 //String stopCode = "11492"; //VERY LONG response, tram
 String stopCode = "12587"; //Sesto Marelli M1 dir Bicocca
 
-#define LINES_SIZE 10
-
 // Expires On	Thursday, 28 July 2022 at 14:00:00
 // const char fingerprint[] PROGMEM = "72 84 14 05 5A 4B 27 DD 07 44 FC 00 96 4E 9B 06 42 0B 9C 7F";
 // pare funzionare anche senza fingerprint
 
+//DISPLAY
+#define SDA D2
+#define SCL D1
+SSD1306Wire display(0x3c, SDA, SCL, GEOMETRY_128_32); // ADDRESS, SDA, SCL, OLEDDISPLAY_GEOMETRY  -  Extra param required for 128x32 displays.
+
 //String stopJSON = "";
-std::list<String> lineIds;
-std::list<String> waitMessages;
+std::vector<String> lineIds;
+std::vector<String> waitMessages;
 
 unsigned long last_action = 0;
 
@@ -76,7 +80,6 @@ void parse_stopJSON(String stopJSON) {
       lineIds.clear();
       waitMessages.clear();
 
-      int i = 0;
       for (JsonVariant line : linesArray) {
         Serial.print(line["Line"]["LineId"].as<String>() + "\t");
         Serial.println(line["WaitMessage"].as<String>());
@@ -86,15 +89,7 @@ void parse_stopJSON(String stopJSON) {
 
         lineIds.push_back(lineId);
         waitMessages.push_back(waitMessage);
-
-        //lineIds[i] = line["Line"]["LineId"].as<String>();
-        //waitMessages[i] = line["WaitMessage"].as<String>();
-
-        i++;
       }
-
-      //lineId = doc["Lines"][0]["Line"]["LineId"].as<String>();
-      //waitMessage = doc["Lines"][0]["WaitMessage"].as<String>();
     }
   }
 }
@@ -141,9 +136,32 @@ void https_request() {
   }
 }
 
+void draw_display() {
+  display.clear();
+  display.setTextAlignment(TEXT_ALIGN_LEFT);
+  display.setFont(ArialMT_Plain_10);
+  if (lineIds.size() > 0) {
+    display.drawString(0, 0, lineIds.at(0));
+    display.setTextAlignment(TEXT_ALIGN_RIGHT);
+    display.drawString(127, 0, waitMessages.at(0));
+  }
+
+  display.setTextAlignment(TEXT_ALIGN_LEFT);
+  if (lineIds.size() > 1) {
+    display.drawString(0, 10, lineIds.at(1));
+    display.setTextAlignment(TEXT_ALIGN_RIGHT);
+    display.drawString(127, 10, waitMessages.at(1));
+  }
+  display.setTextAlignment(TEXT_ALIGN_LEFT);
+
+  display.display();
+}
+
 void setup() {
   Serial.begin(115200);
   setup_wifi();
+
+  display.init();
 }
 
 void loop() {
@@ -153,6 +171,7 @@ void loop() {
     if (WiFi.status() == WL_CONNECTED) {
       https_request();
     }
+    draw_display();
     //parse_stopJSON();
     //Serial.println(lineId + "\t" + waitMessage);
     Serial.print("Free heap: ");
@@ -164,4 +183,4 @@ void loop() {
 //JSON stops being parsed.
 
 //It seems that this memory leak was because of assigning to global variables. Maybe a problem with garbage collection.
-//Need to fix it.
+//Need to fix it. [maybe fixed]
