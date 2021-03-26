@@ -12,13 +12,13 @@ const char *password = "IOT_TEST";
 String apiUrl = "https://giromilano.atm.it/proxy.ashx";
 //String stopCode = "12493"; //Via Celoria (Istituto Besta)
 //String stopCode = "14033"; //Via Bellini V.le Casiraghi (Sesto S.G.)
-//String stopCode = "11492"; //VERY LONG response, tram
-String stopCode = "12587"; //Sesto Marelli M1 dir Bicocca
+String stopCode = "11492"; //VERY LONG response, tram
+//String stopCode = "12587"; //Sesto Marelli M1 dir Bicocca
 //String stopCode = "12581"; //Villa San Giovanni M1
 
 // Expires On	Thursday, 28 July 2022 at 14:00:00
 // const char fingerprint[] PROGMEM = "72 84 14 05 5A 4B 27 DD 07 44 FC 00 96 4E 9B 06 42 0B 9C 7F";
-// pare funzionare anche senza fingerprint
+// It seems to work without setting the fingerprint. It's not sensitive data after all.
 
 //DISPLAY
 #define SDA D2
@@ -33,8 +33,6 @@ unsigned long last_action = 0;
 
 // ToDo:
 //std::list<String> bulletins;
-
-//HTTPS STREAM??
 
 BearSSL::WiFiClientSecure client;
 
@@ -61,6 +59,7 @@ void setup_wifi() {
   Serial.println(WiFi.localIP());
 }
 
+/*
 void parse_stopJSON(String stopJSON) {
   if (stopJSON != "") {
     StaticJsonDocument<200> filter;
@@ -95,6 +94,7 @@ void parse_stopJSON(String stopJSON) {
     }
   }
 }
+*/
 
 void parse_stopJSON_stream(BearSSL::WiFiClientSecure &str_client) {
 
@@ -126,6 +126,7 @@ void parse_stopJSON_stream(BearSSL::WiFiClientSecure &str_client) {
   } else {
     JsonArray linesArray = doc["Lines"].as<JsonArray>();
 
+    // These are very important because the pointed elements are dynamically allocated: clear() destroys them.
     lineCodes.clear();
     waitMessages.clear();
 
@@ -196,7 +197,14 @@ void draw_display() {
     display.setTextAlignment(TEXT_ALIGN_RIGHT);
     display.drawString(127, 10, waitMessages.at(1));
   }
+
+  //third row added because bulletins are not currently implemented
   display.setTextAlignment(TEXT_ALIGN_LEFT);
+  if (lineCodes.size() > 2) {
+    display.drawString(0, 20, lineCodes.at(2));
+    display.setTextAlignment(TEXT_ALIGN_RIGHT);
+    display.drawString(127, 20, waitMessages.at(2));
+  }
 
   display.display();
 }
@@ -216,8 +224,6 @@ void loop() {
       https_request();
     }
     draw_display();
-    //parse_stopJSON();
-    //Serial.println(lineCode + "\t" + waitMessage);
     Serial.print("Free heap: ");
     Serial.println(ESP.getFreeHeap());
   }
