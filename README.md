@@ -4,9 +4,9 @@ Prendendo ispirazione da [Pensilina-ATM](https://github.com/kristian-keller/Pens
 
 ## Stato attuale
 
-Al momento la funzionalità è limitata alla visualizzazione delle prime due linee di una fermata (hardcodata), senza lo scorrimento di avvisi sulla terza riga.
+Al momento la funzionalità è limitata alla visualizzazione delle prime tre linee di una fermata (hardcodata), senza lo scorrimento di avvisi sulla terza riga.
 
-## Foto di esempio
+## Foto di esempio (non aggiornate alla versione con tre linee)
 
 Sesto Marelli M1:
 
